@@ -1,0 +1,1 @@
+# manuscript_beta2agonist_resistance_training
