@@ -15,7 +15,7 @@ This project uses [`renv`](https://rstudio.github.io/renv/) to manage R package 
    cd manuscript_beta2agonist_resistance_training
    ```
 
-2. **Install packages and set up environment*
+2. **Install packages and set up environment**
 
 You can either run the setup file in a terminal:
   ```bash
