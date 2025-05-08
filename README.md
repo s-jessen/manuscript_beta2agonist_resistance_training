@@ -43,3 +43,18 @@ setup.R                         # Run this script for initial setup
 ├── .Rprofile                   # Auto-activates renv on project load
 └── README.md                   # This file
 ```
+
+The R project contains code to reproduce the following highlighted figures:
+
+# Figure 1
+![Figure 1](https://github.com/user-attachments/assets/08d31e36-dd90-47dd-8cc5-2d78a09699fa)
+
+# Figure 2
+![Figure 2](https://github.com/user-attachments/assets/a4c82d3c-3ef6-44b9-9800-f152d30dc6f1)
+
+# Figure 3
+![Figure 3](https://github.com/user-attachments/assets/1e1b27e9-5c65-4e74-9a52-15f9f6620063)
+
+# Figure 4
+![Figure 4](https://github.com/user-attachments/assets/faa2794d-26b7-43df-b28a-752083c84fa7)
+
