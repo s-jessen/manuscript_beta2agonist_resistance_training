@@ -3,7 +3,7 @@
 This repository contains the code and data to reproduce the analysis from the published proteomics study on β2-agonist treatment combined with resistance training  
 **PMID:** [39366923](https://pubmed.ncbi.nlm.nih.gov/39366923)
 
-##Project Setup
+# Project Setup
 
 This project uses [`renv`](https://rstudio.github.io/renv/) to manage R package dependencies in a fully self-contained way.
 
@@ -24,7 +24,8 @@ You can either run the setup file in a terminal:
 
   Or open setup.R in RStudio and run it interactively.
   
-##Folder Structure
+# Folder Structure
+```
 setup.R                         # Run this script for initial setup
 ├── raw-data/                   # MS/MS data, cell experiment data, and design file
 ├── data/                       # Output files from the analysis
@@ -41,4 +42,4 @@ setup.R                         # Run this script for initial setup
 ├── renv.lock                   # Lockfile for reproducible package versions
 ├── .Rprofile                   # Auto-activates renv on project load
 └── README.md                   # This file
-
+```
