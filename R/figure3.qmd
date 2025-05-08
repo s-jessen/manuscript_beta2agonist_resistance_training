@@ -1,0 +1,318 @@
+---
+title: "2_t-tests"
+format: html
+editor: source
+---
+
+```{r, include = F}
+source("R/libraries.R")
+source("R/settings.R")
+source("R/functions.R")
+```
+
+```{r}
+#Load long form data
+load(here::here('data/df_long_l2fc.rda'))
+
+#Load results
+load(here::here('data/results_resistance.rda'))
+load(here::here('data/results_terbutaline.rda'))
+```
+
+3a - Median log2fold changes of cytosolic ribosomal proteins
+```{r}
+#Collect results for plot annotation
+combined_results <- list("terbutaline" = results_terbutaline, "resistance" = results_resistance)
+
+#Create function for plotting of specific terms
+term_plot <- function(df, term, ontology, group){
+  
+  regulated <- combined_results[[group]] %>% 
+    dplyr::filter(regulated == "+") %>% 
+    dplyr::pull(protein)
+
+  df %>% 
+    dplyr::filter(grepl(term, {{ontology}}, ignore.case = T),
+                  intervention == group) %>% 
+    dplyr::group_by(protein, intervention) %>% 
+    dplyr::summarize(
+      median_l2fc = median(l2fc, na.rm = T),
+      .groups = "drop"
+    ) %>% 
+    #Assign levels for plotting order
+    dplyr::arrange(median_l2fc) %>% 
+    dplyr::mutate(protein = factor(protein, levels = protein)) %>% 
+    #Add regulation information from results (for star annotation)
+    dplyr::mutate(star = ifelse(protein %in% regulated, "*", NA)) %>% 
+    #Plot
+    ggplot(aes(x = protein, y = median_l2fc, fill = intervention), color = "black")+
+    geom_bar(stat = "identity")+
+    scale_fill_manual(values = c(resistance = resistance_color,
+                                 terbutaline = terbutaline_color),
+                      labels = c("resistance" = "Resistance training",
+                                 "terbutaline" = "Beta2-agonist treatment"))+
+    theme(
+      axis.text.x = element_text(angle = 90,
+                                 vjust = 0.5,
+                                 hjust = 1, 
+                                 size = 7),
+      legend.position = "top"
+    )+
+    #Significance annotation
+    geom_text(aes(label = star, y = median_l2fc + 0.05), vjust = 0, size = 3) +
+    labs(y = "Median l2fc",
+         x = NULL)
+  
+}
+
+#Create plots
+#Cytosolic ribosome
+plot_resistance_ribo <- term_plot(df_long_l2fc, "cytosolic ribosome", gocc, "resistance")+
+  coord_cartesian(y=c(-0.1,1))
+
+plot_terbutaline_ribo <- term_plot(df_long_l2fc, "cytosolic ribosome", gocc, "terbutaline")+
+  coord_cartesian(y=c(-0.1,1))
+
+#Initiation factors
+plot_resistance_init <- term_plot(df_long_l2fc, "initiation factor", keywords, "resistance")+
+  coord_cartesian(y=c(-0.2,0.5))+
+  theme(
+    axis.title.y = element_blank()
+  )
+
+plot_terbutaline_init <- term_plot(df_long_l2fc, "initiation factor", keywords, "terbutaline")+
+  coord_cartesian(y=c(-0.2,0.5))+
+  theme(
+    axis.title.y = element_blank()
+  )
+
+#Elongation factors
+plot_resistance_elong <- term_plot(df_long_l2fc, "elongation factor", keywords, "resistance")+
+  coord_cartesian(y=c(-0.2,1))+
+  theme(
+    axis.title.y = element_blank()
+  )
+
+plot_terbutaline_elong <- term_plot(df_long_l2fc, "elongation factor", keywords, "terbutaline")+
+  coord_cartesian(y=c(-0.2,1))+
+  theme(
+    axis.title.y = element_blank()
+  )
+
+#Combine plot
+combined_plot <- (plot_resistance_ribo + plot_resistance_init + plot_resistance_elong+
+                  patchwork::plot_layout(widths = c(0.59, 0.27, 0.14)))/
+  (plot_terbutaline_ribo + plot_terbutaline_init + plot_terbutaline_elong+
+   patchwork::plot_layout(widths = c(0.59, 0.27, 0.14)))+
+  patchwork::plot_layout(guides = "collect") &
+  theme(legend.position = "top")
+
+ggsave(here::here('data/figures/figure3/term_plots.svg'), height = 70, width = 220, units = "mm", plot = combined_plot)
+
+```
+
+3b - Running enrichment score plots
+```{r}
+load(here::here('data/gsea_objects.rda'))
+
+#Extract gsea objects
+res <- gsea_objects[["res"]]
+ter <- gsea_objects[["ter"]]
+
+#Plot and save
+plot_running_res <- gseaplot(res, geneSetID="GO:0006412",
+         title = "GO:0006412, Translation")
+
+ggsave(here::here('data/figures/figure3/running_score_res.svg'), height = 100, width = 150, units = "mm", plot = plot_running_res)
+
+plot_running_ter <- gseaplot(ter, geneSetID="GO:0006412",
+         title = "GO:0006412, Translation")
+
+ggsave(here::here('data/figures/figure3/running_score_ter.svg'), height = 100, width = 150, units = "mm", plot = plot_running_ter)
+
+```
+
+3c - Mean abundance plots
+Here, p-values have been annotated manually after plotting
+```{r}
+#Create function
+median_violin_plot <- function(df, term, ontology, plot_title){
+  
+  df %>% 
+    dplyr::filter(grepl(term, {{ontology}}, ignore.case = T)) %>% 
+      dplyr::group_by(protein, intervention) %>% 
+      dplyr::summarize(
+        median_l2fc = median(l2fc, na.rm = T),
+        .groups = "drop"
+      ) %>% 
+    ggplot(aes(x = intervention, y = median_l2fc, fill = intervention), 
+           color = "black")+
+    geom_violin()+
+    geom_hline(yintercept = 0, linetype = "dashed", linewidth = 0.25)+
+    geom_point(aes(fill = NA),
+               shape = 16,
+               position = position_jitter(width = 0.05)
+               )+
+    scale_fill_manual(values = c(resistance = resistance_color,
+                                   terbutaline = terbutaline_color))+
+    theme(
+      legend.position = "none"
+    )+
+    guides(color = F)+
+    scale_x_discrete(labels = c("resistance" = "RES",
+                                "terbutaline" = "B2A"))+
+    labs(y = "Median l2fc",
+         x = NULL,
+         title = plot_title)
+
+}
+
+#Create plots with above function
+plot_ribo <- median_violin_plot(df_long_l2fc, "cytosolic ribosome", gocc, "Cytosolic ribosomal\nproteins")+
+  coord_cartesian(y=c(-0.5,1.5))
+
+plot_init <- median_violin_plot(df_long_l2fc, "initiation factor", keywords, "Inititation factors\n")+
+  theme(axis.title.y = element_blank())+
+  coord_cartesian(y=c(-0.2,0.6))
+
+plot_elong <- median_violin_plot(df_long_l2fc, "elongation factor", keywords, "Elongation factors\n")+
+  theme(axis.title.y = element_blank())+
+  coord_cartesian(y=c(-0.5,1.5))
+
+#Combine plot
+combined_median_violin_plots <- plot_ribo + plot_init + plot_elong
+
+#Save
+ggsave(here::here('data/figures/figure3/median_violin_plots.svg'), height = 100, width = 150, units = "mm", plot = combined_median_violin_plots)
+
+```
+
+3d - Median log2fold changes of mitochondrial proteins
+```{r}
+#Create data frame with only OXPHOS subunits
+mitochondrial_l2fc <- df_long_l2fc %>% 
+  dplyr::filter(grepl("subunits", mito),
+                protein != "CYCS") %>% 
+  dplyr::group_by(protein, intervention, mito) %>% 
+      dplyr::summarize(
+        median_l2fc = median(l2fc, na.rm = T),
+        .groups = "drop"
+      ) %>% 
+  dplyr::mutate(subunit = case_when(
+      grepl("Complex I ", mito) ~ "CI",
+      grepl("Complex II ", mito) ~ "CII",
+      grepl("Complex III ", mito) ~ "CIII",
+      grepl("Complex IV ", mito) ~ "CIV",
+      grepl("Complex V ", mito) ~ "CV")
+      )
+
+#Collect results for plot annotation
+combined_results <- list("terbutaline" = results_terbutaline, "resistance" = results_resistance)
+
+#Function for plotting
+mito_plot <- function(df, group) {
+  
+  regulated <- combined_results[[group]] %>% 
+      dplyr::filter(regulated == "+") %>% 
+      dplyr::pull(protein)
+  
+  mitochondrial_l2fc %>%
+    dplyr::filter(intervention == group) %>% 
+    dplyr::arrange(subunit, median_l2fc) %>%
+    dplyr::mutate(protein = factor(protein, levels = protein)) %>% 
+    #Add regulation information from results (for star annotation)
+    dplyr::mutate(star = ifelse(protein %in% regulated, "*", NA)) %>% 
+    ggplot(aes(y=median_l2fc, x=protein, fill= intervention))+
+    scale_fill_manual(values = c("terbutaline" = terbutaline_color,
+                                 "resistance" = resistance_color))+
+    geom_col(na.rm=TRUE)+
+    geom_hline(yintercept=0, linetype="dashed", linewidth = 0.25)+
+    theme(
+      axis.text.x = element_text(angle = 90,
+                                   vjust = 0.5,
+                                   hjust = 1, 
+                                   size = 7),
+      legend.position = "none"
+    )+
+    #Significance annotation
+    geom_text(aes(label = star, y = median_l2fc - 0.25), vjust = 0, size = 3) +
+    labs(y = NULL,
+         x = NULL,
+         title = "Oxidative phosphorylation")+
+    coord_cartesian(y=c(-1, 0.5))
+}
+
+#Create plots
+plot_res_mito <- mito_plot(df_long_l2fc, "resistance")
+plot_ter_mito <- mito_plot(df_long_l2fc, "terbutaline")
+
+#Combine plots
+combined_mito_plot <- plot_res_mito/plot_ter_mito
+
+#Save
+ggsave(here::here('data/figures/figure3/mitochondrial_subunits_plot.svg'), height = 75, width = 150, units = "mm", plot = combined_mito_plot)
+
+```
+
+3e - Myosin changes
+```{r}
+#Calculate changes in MYH abundances
+df_myh <- df_long_l2fc %>% 
+  dplyr::filter(protein %in% c("MYH7", "MYH2", "MYH1")) %>% 
+  dplyr::group_by(protein, intervention) %>% 
+  dplyr::summarize(
+    median_l2fc = median(l2fc, na.rm = T),
+    .groups = "drop"
+      )
+
+#Plot
+myh_plot <- ggplot(df_myh, aes(x = median_l2fc, y = protein, fill = intervention))+
+  geom_bar(color = "black",
+           linewidth = 0.25,
+           stat = "identity",
+           position = position_dodge(width = 1))+
+  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 0.25)+
+  scale_fill_manual(values = c("terbutaline" = terbutaline_color,
+                                 "resistance" = resistance_color))+
+  theme(legend.position = "none")+
+  labs(y = NULL,
+       x = "Median l2fc")
+
+#Save
+ggsave(here::here('data/figures/figure3/myosin_distributions.svg'), height = 35, width = 75, units = "mm", plot = myh_plot)
+  
+```
+
+3f - metabolic processes
+```{r}
+#Calculate changes in metabolic process abundances
+df_gobp <- df_long_l2fc %>% 
+  dplyr::mutate(process = case_when(
+    grepl("glycolytic process", gobp, ignore.case = T) ~ "Glycolytic process (GO:BP)",
+    grepl("fatty acid metabolic process", gobp, ignore.case = T) ~ "Fatty acid metabolic process (GO:BP)",
+    grepl("amino acid metabolic process", gobp, ignore.case = T) ~ "Amino acid process (GO:BP)")) %>% 
+  dplyr::filter(!is.na(process)) %>% 
+  dplyr::group_by(process, intervention) %>% 
+  dplyr::summarize(
+    median_l2fc = median(l2fc, na.rm = T),
+    .groups = "drop"
+      )
+
+#Plot
+gobp_plot <- ggplot(df_gobp, aes(x = median_l2fc, y = process, fill = intervention))+
+  geom_bar(color = "black",
+           linewidth = 0.25,
+           stat = "identity",
+           position = position_dodge(width = 1))+
+  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 0.25)+
+  scale_fill_manual(values = c("terbutaline" = terbutaline_color,
+                                 "resistance" = resistance_color))+
+  theme(legend.position = "none")+
+  labs(y = NULL,
+       x = "Median l2fc")
+
+#Save
+ggsave(here::here('data/figures/figure3/metabolic_processes_plot.svg'), height = 35, width = 75, units = "mm", plot = gobp_plot)
+
+```
+

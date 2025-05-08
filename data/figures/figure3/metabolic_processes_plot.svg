@@ -1,0 +1,55 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' class='svglite' width='212.60pt' height='99.21pt' viewBox='0 0 212.60 99.21'>
+<defs>
+  <style type='text/css'><![CDATA[
+    .svglite line, .svglite polyline, .svglite polygon, .svglite path, .svglite rect, .svglite circle {
+      fill: none;
+      stroke: #000000;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-miterlimit: 10.00;
+    }
+    .svglite text {
+      white-space: pre;
+    }
+  ]]></style>
+</defs>
+<rect width='100%' height='100%' style='stroke: none; fill: none;'/>
+<defs>
+  <clipPath id='cpMC4wMHwyMTIuNjB8MC4wMHw5OS4yMQ=='>
+    <rect x='0.00' y='0.00' width='212.60' height='99.21' />
+  </clipPath>
+</defs>
+<g clip-path='url(#cpMC4wMHwyMTIuNjB8MC4wMHw5OS4yMQ==)'>
+</g>
+<defs>
+  <clipPath id='cpMTQ0LjcxfDIwNy4xMnw1LjQ4fDcxLjIz'>
+    <rect x='144.71' y='5.48' width='62.41' height='65.75' />
+  </clipPath>
+</defs>
+<g clip-path='url(#cpMTQ0LjcxfDIwNy4xMnw1LjQ4fDcxLjIz)'>
+<rect x='184.83' y='59.42' width='5.08' height='9.25' style='stroke-width: 0.53; stroke-linecap: butt; stroke-linejoin: miter; fill: #355C7D;' />
+<rect x='189.91' y='49.14' width='9.80' height='9.25' style='stroke-width: 0.53; stroke-linecap: butt; stroke-linejoin: miter; fill: #C06C84;' />
+<rect x='147.55' y='38.87' width='42.36' height='9.25' style='stroke-width: 0.53; stroke-linecap: butt; stroke-linejoin: miter; fill: #355C7D;' />
+<rect x='184.43' y='28.59' width='5.48' height='9.25' style='stroke-width: 0.53; stroke-linecap: butt; stroke-linejoin: miter; fill: #C06C84;' />
+<rect x='175.65' y='18.32' width='14.26' height='9.25' style='stroke-width: 0.53; stroke-linecap: butt; stroke-linejoin: miter; fill: #355C7D;' />
+<rect x='189.91' y='8.05' width='14.37' height='9.25' style='stroke-width: 0.53; stroke-linecap: butt; stroke-linejoin: miter; fill: #C06C84;' />
+<line x1='189.91' y1='71.23' x2='189.91' y2='5.48' style='stroke-width: 0.53; stroke-dasharray: 4.00,4.00; stroke-linecap: butt;' />
+<rect x='144.71' y='5.48' width='62.41' height='65.75' style='stroke-width: 0.53;' />
+</g>
+<g clip-path='url(#cpMC4wMHwyMTIuNjB8MC4wMHw5OS4yMQ==)'>
+<text x='139.78' y='61.77' text-anchor='end' style='font-size: 8.00px; font-family: "Arial";' textLength='102.72px' lengthAdjust='spacingAndGlyphs'>Amino acid process (GO:BP)</text>
+<text x='139.78' y='41.22' text-anchor='end' style='font-size: 8.00px; font-family: "Arial";' textLength='134.30px' lengthAdjust='spacingAndGlyphs'>Fatty acid metabolic process (GO:BP)</text>
+<text x='139.78' y='20.67' text-anchor='end' style='font-size: 8.00px; font-family: "Arial";' textLength='97.38px' lengthAdjust='spacingAndGlyphs'>Glycolytic process (GO:BP)</text>
+<polyline points='141.97,58.90 144.71,58.90 ' style='stroke-width: 1.07; stroke: #333333; stroke-linecap: butt;' />
+<polyline points='141.97,38.35 144.71,38.35 ' style='stroke-width: 1.07; stroke: #333333; stroke-linecap: butt;' />
+<polyline points='141.97,17.81 144.71,17.81 ' style='stroke-width: 1.07; stroke: #333333; stroke-linecap: butt;' />
+<polyline points='148.97,73.97 148.97,71.23 ' style='stroke-width: 1.07; stroke: #333333; stroke-linecap: butt;' />
+<polyline points='169.44,73.97 169.44,71.23 ' style='stroke-width: 1.07; stroke: #333333; stroke-linecap: butt;' />
+<polyline points='189.91,73.97 189.91,71.23 ' style='stroke-width: 1.07; stroke: #333333; stroke-linecap: butt;' />
+<text x='148.97' y='81.89' text-anchor='middle' style='font-size: 8.00px; font-family: "Arial";' textLength='18.24px' lengthAdjust='spacingAndGlyphs'>-0.10</text>
+<text x='169.44' y='81.89' text-anchor='middle' style='font-size: 8.00px; font-family: "Arial";' textLength='18.24px' lengthAdjust='spacingAndGlyphs'>-0.05</text>
+<text x='189.91' y='81.89' text-anchor='middle' style='font-size: 8.00px; font-family: "Arial";' textLength='15.57px' lengthAdjust='spacingAndGlyphs'>0.00</text>
+<text x='175.92' y='92.05' text-anchor='middle' style='font-size: 8.00px; font-family: "Arial";' textLength='40.92px' lengthAdjust='spacingAndGlyphs'>Median l2fc</text>
+</g>
+</svg>

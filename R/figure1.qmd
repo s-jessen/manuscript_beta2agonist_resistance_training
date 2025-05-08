@@ -1,0 +1,115 @@
+---
+title: "2_t-tests"
+format: html
+editor: source
+---
+
+```{r, include = F}
+source("R/libraries.R")
+source("R/settings.R")
+```
+
+```{r}
+#Load long form data
+load(here::here('data/df_long.rda'))
+
+#Load SummarizedExperiment
+load(here::here('data/se_filtered.rda'))
+```
+
+1c - Log10intensity plot
+```{r}
+#Use long form dataset and reverse log-transforme
+df_long_raw <- df_long %>% 
+    dplyr::mutate(abundance = 2^abundance)
+
+#Choose proteins to label
+protein_labels <- c("ACTA1", "MB", "CKM", "MYH7", "MYH2", "KLHL41", "MYBPH",
+                    "AKR1C1", "AKR1C2", "AKR1C3", "S100A13", "COL1A1", "COL1A2")
+
+#Compute log10 median abundance for each protein
+df_long_log10 <- df_long_raw %>% 
+  dplyr::group_by(protein) %>% 
+  dplyr::summarize(median_abundance = median(abundance)) %>% 
+  dplyr::mutate(log10median = log10(median_abundance)) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::arrange(desc(log10median)) %>% 
+  dplyr::mutate(rank = row_number()) %>% 
+  dplyr::mutate(labels = case_when(protein %in% protein_labels ~ protein))
+
+#Plot
+df_long_log10 %>% 
+    ggplot2::ggplot(aes(x = rank, y = log10median, label = labels))+
+    ggplot2::geom_point(size = 2, alpha = 0.1)+
+    ggrepel::geom_text_repel(point.size=3, size=2, min.segment.length = 0)+
+    labs(y="Log 10 median intensity", x="Rank")
+
+ggplot2::ggsave(here::here('data/figures/figure1/1c_log10intensity.svg'), width = 90, height = 45, units = "mm")
+
+```
+
+1d - Fraction of valid values
+```{r}
+#Long form transform non-imputed dataset
+df_valid_values <- SummarizedExperiment::assay(se_filtered) %>%
+  tibble::rownames_to_column("protein") %>%
+  tidyr::pivot_longer(
+    cols = -protein,
+    names_to = "sample",
+    values_to = "value"
+    ) %>%
+  dplyr::mutate(valid = ifelse(is.na(value), "Imputed", "Valid values"))
+
+#Plot
+df_valid_values %>% 
+  ggplot(aes(x = sample, fill = valid)) +
+  geom_bar(position = "stack", color = "#ffffff", size=0.2) +
+  scale_fill_manual(values = c("Valid values" = "black", "Imputed" = "red")) +
+  scale_color_manual(values = c("Valid values" = "black", "Imputed" = "red"))+
+  labs(x = "Sample",
+     y = "Protein Count") +
+  scale_y_continuous(breaks = seq(0, 1132, 100)) +
+  theme(
+    axis.text.x = element_blank(),
+    legend.position = "top",
+    axis.ticks.x = element_blank()
+  )+
+    guides(color = "none")
+
+ggplot2::ggsave(here::here('data/figures/figure1/1d_valid_values.svg'), width = 90, height = 45, units = "mm")
+```
+
+1e - Myosin distribution
+```{r}
+#Subset long form data for MYH1, MYH2, and MYH7.
+fiber_type_distribution <- df_long %>% 
+  dplyr::filter((protein == 'MYH7'|
+                protein == 'MYH2'|
+                protein == 'MYH1')&
+                time == "pre") %>% 
+  dplyr::mutate(abundance=2^abundance) %>% 
+  dplyr::group_by(sample) %>% 
+  dplyr::mutate(rel_abundance=abundance/sum(abundance, na.rm=TRUE)*100) %>% 
+  dplyr::mutate(protein = factor(protein, levels = c(
+    "MYH7", "MYH2", "MYH1"
+  )))
+
+#Plot
+fiber_type_distribution %>% 
+  ggplot(aes(x=sample, y=rel_abundance, fill=protein))+ #Create figure
+  geom_bar(stat="identity")+
+  scale_fill_manual(values = c("MYH1" = "#d4d4d3",
+                               "MYH2" = "#7c97cd",
+                               "MYH7" = "#d14a4f"))+
+    theme(
+  axis.text.x = element_blank(),
+  legend.position = "top",
+  axis.ticks.x = element_blank()
+  )+
+    labs(x = NULL,
+         y = "Relative MYH\nproportion at baseline (%)")
+
+ggplot2::ggsave(here::here('data/figures/figure1/1e_myosin_distributions.svg'), width = 90, height = 45, units = "mm")
+
+```
+

@@ -1,0 +1,486 @@
+---
+title: "2_t-tests"
+format: html
+editor: source
+---
+
+```{r, include = F}
+source("R/libraries.R")
+source("R/settings.R")
+source("R/functions.R")
+```
+
+```{r}
+#Load long form data
+load(here::here('data/df_long.rda'))
+
+#Load SummarizedExperiment
+load(here::here('data/se_filtered.rda'))
+
+#Load results
+load(here::here('data/results_time.rda'))
+load(here::here('data/results_resistance.rda'))
+load(here::here('data/results_terbutaline.rda'))
+load(here::here('data/results_interaction.rda'))
+```
+
+2a - Volcanoes
+
+We collect all results in a named list, as well as all desired protein labels in a named list with the same names.
+Then loop over each result sheet to create a volcano plot.
+Finally, combine all volcano plots into a single layout
+```{r}
+#Collect results in named list
+results_list <- list(
+  time = results_time,
+  resistance = results_resistance,
+  terbutaline = results_terbutaline,
+  interaction = results_interaction
+)
+
+#Create unique labels for each plot
+protein_labels <- list(
+  time = c("KLHL41", "KLHL40", "FLNC", "AKR1C1", "AKR1C2", "AKR1C3", "COL1A1",
+           "COL1A2", "SMTNL2"),
+  resistance = c("COL1A1", "COL1A2", "AKR1C1", "AKR1C2", "AKR1C3", "SERPINH1",
+                 "MUSTN1"),
+  terbutaline = c("COL1A1", "COL1A2", "AKR1C1", "AKR1C2", "AKR1C3", "SERPINB1"),
+  interaction = c("BPGM", "CA2", "LMCD1", "MUSTN1", "SYNPO2L")
+)
+
+#Create plot titles
+plot_titles <- c(
+  time = "Main effect of time",
+  resistance = "Resistance training",
+  terbutaline = expression(paste("Beta", scriptstyle(2), "-agonist treatment")),
+  interaction = "Treatment × time interaction"
+)
+
+#Create list to store plots
+volcanoes <- list()
+
+for (result in names(results_list)){
+  
+  df <- results_list[[result]]
+  labels <- protein_labels[[result]]
+  
+  #Count number of upregulated proteins
+  upregulated_count <- df %>%
+  dplyr::filter(q < 0.05 & effect_size > 0) %>%
+  nrow()
+  
+  #Count number of downregulated proteins
+  downregulated_count <- df %>%
+    dplyr::filter(q < 0.05 & effect_size < 0) %>%
+    nrow()
+  
+  #Plot
+  plot <- df %>%
+    #Add labels
+    dplyr::mutate(label = case_when(
+      protein %in% labels ~ protein, T ~ NA
+    )) %>%
+    #Add color coding variable
+    dplyr::mutate(color = case_when(
+      effect_size >= 0 & q <= 0.05 ~ "Upregulated",
+      effect_size <= 0 & q <= 0.05 ~ "Downregulated",
+      T ~ "Unchanged")) %>%
+    ggplot(aes(x=effect_size, y=-log10(p)))+
+    geom_point(aes(color = color, alpha=color), size = 1, shape = 16)+
+    geom_text_repel(aes(label = label),
+                    point.size=1,
+                    size=2,
+                    min.segment.length = 0.1,
+                    force=0.3, 
+                    segment.size = 0.1,
+                    na.rm = T)+
+    annotate("text", x = 2, y = 8, label = paste("Up:", upregulated_count),
+             size = 2, hjust = 1, vjust = 1, color = "#a51e22") +
+    annotate("text", x = -2, y = 8, label = paste("Down:", downregulated_count),
+             size = 2, hjust = 0, vjust = 1, color = "#1e5886") +
+    theme(
+      legend.position = "none",
+        plot.title = element_text(size = 8,
+                                  margin = margin(0, 0, 0, 0),
+                                  hjust = 0.5),
+        aspect.ratio = 1,
+      )+
+    scale_color_manual(breaks = c("Upregulated", "Downregulated", "Unchanged"),
+                       values=c("#e54649", "#5b62ab", "gray50"))+
+    scale_alpha_manual(breaks = c("Upregulated", "Downregulated", "Unchanged"),
+                       values=c(1, 1, 0.1))+
+    labs(
+        x = "effect_size (post-pre)",
+        y = "-log10 (p-value)",
+        title = plot_titles[[result]]
+         )+
+    coord_cartesian(x = c(-2, 2),
+                    y = c(0, 8))
+  
+  #Remove y-axis title for plot 2 through 4
+  if (result != "time"){
+    plot <- plot + theme(axis.title.y = element_blank())
+  }
+
+  volcanoes[[result]] <- plot
+  
+}
+
+#Combine into one layout
+all_volcanoes <- (volcanoes[["time"]] | volcanoes[["resistance"]] | volcanoes[["terbutaline"]] | volcanoes[["interaction"]])
+
+ggsave(here::here('data/figures/figure2/volcanoes.svg'), width=215, height=60, units = "mm")
+
+```
+
+2b - Top10 up and downregulated proteins
+```{r}
+#Create function
+top10_plot <- function(df, title_text){
+  
+  #Identify top upregulated proteins
+  top_upregulated <- df %>%
+    dplyr::filter(protein != "ALBU" & protein != "HV307") %>%
+    dplyr::filter(effect_size > 0 & q < 0.05) %>%
+    dplyr::arrange(desc(effect_size)) %>%
+    dplyr::slice_head(n=10)
+  
+  #Identify top downregulated proteins
+  top_downregulated <- df %>%
+    dplyr::filter(effect_size < 0 & q < 0.05) %>%
+    dplyr::arrange(effect_size) %>%
+    dplyr::slice_head(n=10)
+  
+  #Bind into one data frame
+  all <- rbind(top_upregulated, top_downregulated) %>%
+    dplyr::mutate(color = ifelse(effect_size > 0, "Upregulated", "Downregulated"))
+  
+  #Plot
+  plot <- all %>%
+    ggplot(aes(y=effect_size, x=reorder(protein, -effect_size), fill=color))+
+    geom_col(na.rm=TRUE)+
+    geom_hline(yintercept=0, linetype="dashed", linewidth = 0.25)+
+    scale_fill_manual(values=c("#0078b0", "#c41b1b"))+
+    theme(
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+      legend.key.size = (grid::unit(2.5, "mm")),
+      legend.key.height = (grid::unit(2.5, "mm")),
+      legend.position = c(1, 1),
+      legend.justification = c("right", "top"),
+    )+
+    ylim(-1, 2)+
+    labs(y = NULL,
+         x = NULL,
+         title = title_text)
+  
+  print(plot)
+}
+
+#Plot for resistance and terbutaline
+resistance_plot <- top10_plot(results_resistance, "Resistance training")
+terbutaline_plot <- top10_plot(results_terbutaline, expression(
+  paste("Beta", scriptstyle(2), "-agonist treatment")))
+
+
+#Add plot for main effect of time
+#Identify top upregulated, pull into vector
+up_proteins <- results_time%>%
+    dplyr::filter(protein != "ALBU" & protein != "HV307") %>%
+    dplyr::filter(effect_size > 0 & q < 0.05) %>%
+    dplyr::arrange(desc(effect_size)) %>%
+    dplyr::slice_head(n=10) %>% 
+    dplyr::pull(protein)
+
+#Identify top downregulated proteins, pull into vector
+down_proteins <- results_time %>%
+    dplyr::filter(effect_size < 0 & q < 0.05) %>%
+    dplyr::arrange(effect_size) %>%
+    dplyr::slice_head(n=10) %>% 
+    dplyr::pull(protein)
+
+#Combine to one vector
+updown_proteins <- c(up_proteins, down_proteins)
+
+#Combine results from ter and res in main effect
+ter_proteins <- results_terbutaline %>% 
+    dplyr::filter(protein %in% updown_proteins)
+
+res_proteins <- results_resistance%>% 
+    dplyr::filter(protein %in% updown_proteins)
+
+combined_proteins <- rbind(ter_proteins, res_proteins)%>% 
+    dplyr::mutate(effect_size = effect_size/2)
+
+#Plot main effect
+main_plot <- combined_proteins %>%
+  ggplot(aes(y=effect_size, x=reorder(protein, -effect_size), fill=contrast))+
+  geom_col(na.rm=TRUE)+
+  geom_hline(yintercept=0, linetype="dashed", linewidth = 0.25)+
+  scale_fill_manual(
+    values=c(resistance = "#345c7e", terbutaline = "#c16c85"),
+    labels = c(resistance = "Resistance training", 
+               terbutaline = expression(paste("Beta", scriptstyle(2), "-agonist treatment"))))+
+  theme(
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+      legend.key.size = (grid::unit(2.5, "mm")),
+      legend.key.height = (grid::unit(2.5, "mm")),
+      legend.position = c(1, 1),
+      legend.justification = c("right", "top"),
+  )+
+  ylim(-1, 2)+
+  labs(y = "Mean log2fold change",
+       x = NULL,
+       title = "Main effect w. group contributions")
+
+#Combine into one plot
+all_top10 <- main_plot + resistance_plot + terbutaline_plot
+
+ggsave(here::here('data/figures/figure2/top10.svg'), width=200, height=45, units = "mm", plot = all_top10)
+
+```
+
+2c - Euler plot
+```{r}
+plot(
+    eulerr::euler(
+        list(
+            Quantified = unique(c(results_resistance$protein, results_terbutaline$protein)),
+            "Regulated with beta2-agonist" = dplyr::filter(results_terbutaline, q <0.05)$protein,
+            "Regulated with resistance training" = dplyr::filter(results_resistance, q <0.05)$protein
+        )
+        ),fills = c("white", terbutaline_color, resistance_color), quantities = NULL, legend =TRUE
+    )
+```
+
+2d - Correlation plot
+```{r}
+#Merge log2fold changes from resistance training and terbutaline groups
+regulation_correlation <- merge(x=results_terbutaline, y=results_resistance, by="protein") %>% 
+  dplyr::select(c("effect_size.x", "effect_size.y", "protein")) %>% 
+  dplyr::rename(effect_size_ter = effect_size.x,
+                effect_size_res = effect_size.y)
+
+#Plot
+regulation_correlation %>% 
+    dplyr::filter(protein != "ALBU" & protein != "HV307") %>% 
+    ggplot(aes(x=effect_size_res, y=effect_size_ter, label=protein)) +
+    geom_abline(slope = 1, intercept = 0, linetype = "solid", color = "red")+
+    geom_point(size = 2, shape = 1, fill = NA, stroke = 0.1)+
+    geom_hline(yintercept = 0, linetype = "dashed", color = "black", linewidth = 0.1)+
+    geom_vline(xintercept = 0, linetype = "dashed", color = "black", linewidth = 0.1)+
+    geom_smooth(method = "lm",
+                se = FALSE,
+                color = "blue",
+                linetype = "dashed",
+                linewidth = 0.25,
+                group = 1)+
+    geom_text_repel(point.size=2,
+                    size=2,
+                    force=0.5,
+                    min.segment.length = 0.1,
+                    segment.size = 0.25)+
+    theme(
+        aspect.ratio = 0.45,
+    )+
+    labs(
+        x = "Log2fold change, Resistance training",
+        y = expression(atop("Log2fold change,", paste("Beta", scriptstyle(2), "-agonist treatment"))),
+        title = "")
+
+ggsave(here::here('data/figures/figure2/correlation.svg'), height = 55, width = 130, units = "mm")
+
+```
+
+2e - Gene set enrichment analysis
+```{r, include = F}
+#Results to loop over (main effect of time, resistance training, terbutaline)
+comparisons <- list("main" = results_time, 
+                 "res"= results_resistance,
+                 "ter" = results_terbutaline)
+
+#Empty list to store results
+gsea_results <- list()
+gsea_results_filtered <- list()
+gsea_objects <- list()
+gsea_objects_filtered <- list()
+
+for (comparison in names(comparisons)){
+  
+  df <- comparisons[[comparison]]
+
+  #Preparation of ranked protein list (GO:BP)
+  gsea_list <- as.numeric(df$effect_size)
+  
+  names(gsea_list)=as.character(df$protein)
+  
+  
+  #GSEA analysis (GO:BP)
+  gsea <- gseGO(
+    geneList = gsea_list,
+    OrgDb = org.Hs.eg.db,
+    ont = "ALL",
+    pvalueCutoff = 0.05,
+    keyType = "SYMBOL",
+    eps=0,
+    maxGSSize = 200,
+    nPermSimple = 10000
+    )
+  
+  #Filter for redundancy of GO-terms. 
+  gsea_filtered <- clusterProfiler::simplify(gsea, cutoff=0.6, by="p.adjust", select_fun=min)
+  
+  #Create dotplot
+  clusterProfiler::dotplot(gsea, showCategory=10, title="GO:BP")+facet_grid(.~.sign, labeller=as_labeller(c(
+      `activated` = "Enriched",
+      `suppressed` = "Depleted")))
+  
+  #Append result to list
+  gsea_results[[comparison]] <- as.data.frame(gsea)
+  gsea_results_filtered[[comparison]] <- as.data.frame(gsea_filtered)
+  
+  gsea_objects[[comparison]] <- gsea
+  gsea_objects_filtered[[comparison]] <- gsea_filtered
+  
+}
+
+#Store gsea results
+usethis::use_data(gsea_results, overwrite = TRUE)
+usethis::use_data(gsea_results_filtered, overwrite = TRUE)
+usethis::use_data(gsea_objects, overwrite = TRUE)
+usethis::use_data(gsea_objects_filtered, overwrite = TRUE)
+
+```
+
+```{r, include = F}
+#Create function for bubble plots
+#Labels may need adjusting in Illustrator or similar
+bubble_plot <- function(gsea_df, ontology, plot_title, labels){
+
+  plot <- gsea_df %>%
+    dplyr::filter(ONTOLOGY == ontology) %>% 
+    dplyr::mutate(bubble_size=-log10(p.adjust)) %>%
+    dplyr::mutate(fill_color = ifelse(NES > 0, "upregulated", "downregulated")) %>%
+    dplyr::mutate(label = dplyr::case_when(Description %in% labels ~ Description)) %>%
+    ggplot(aes(x=NES, y=reorder(Description, NES), label = label))+
+    geom_point(aes(size=bubble_size, fill=fill_color), shape=21, color="black", alpha=0.8)+
+    scale_fill_manual(values = c("upregulated" = upregulated_color,
+                                 "downregulated" = downregulated_color))+
+    #scale_size(range=c(5, 15), name="-log10(p.adjusted)", limits = c(1, 30))+
+    theme(
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        legend.position = "none"
+    )+
+    ylab("")+
+    xlab("Normalized Enrichment Score")+
+    guides(fill = F)+
+    labs(x = "Normalized enrichment score",
+         y = NULL,
+         title = plot_title)+
+    geom_text_repel(point.size=1, size=2,
+                    min.segment.length = 0
+    )+
+    coord_cartesian(x=c(-3.5,3))
+
+}
+
+#Main effect of time plot (CC)
+cc_main_labels <- c("cytosolic ribosome",
+                    "ribonucleoprotein complex",
+                    "collagen-containing extracellular matrix",
+                    "extracellular matrix",
+                    "cytochrome complex",
+                    "mitochondrial envelope",
+                    "transporter complex",
+                    "oxidoreductase complex",
+                    "respirasome")
+
+main_cc_plot <- bubble_plot(gsea_results_filtered[["main"]],
+                            "CC",
+                            "Main effect of time",
+                            cc_main_labels)
+
+#Main effect of time plot (BP)
+bp_main_labels <- c("translation",
+                    "regulation of cellular component size",
+                    "ribonucleoprotein complex biogenesis",
+                    "ATP metabolic process",
+                    "cellular respiration")
+
+main_bp_plot <- bubble_plot(gsea_results_filtered[["main"]],
+                            "BP",
+                            "Main effect of time",
+                            bp_main_labels)
+
+#Resistance training plot (CC)
+cc_res_labels <- c("ribosomal subunit",
+                   "ribosome",
+                   "ribonucleoprotein complex",
+                   "cytochrome complex",
+                   "integral component of membrane",
+                   "transporter complex",
+                   "oxidoreductase complex",
+                   "mitochondrial respirasome")
+
+res_cc_plot <- bubble_plot(gsea_results_filtered[["res"]],
+                           "CC",
+                           "Resistance training",
+                           cc_res_labels)
+
+#Resistance training plot (BP)
+bp_res_labels <- c("translation",
+                   "actin filament organization",
+                   "organelle assembly",
+                   "skeletal system development",
+                   "ribosome biogenesis",
+                   "actin filament-based process",
+                   "mitochondrial respirasome assembly",
+                   "proton motive force-driven mitochondrial ATP synthesis")
+
+res_bp_plot <- bubble_plot(gsea_results_filtered[["res"]],
+                           "BP",
+                           "Resistance training",
+                           bp_res_labels)
+
+#Terbutaline plot (CC)
+cc_ter_labels <- c("collagen-containing extracellular matrix",
+                   "extracellular matrix",
+                   "cytosolic ribosome",
+                   "ribonucleoprotein complex",
+                   "cytochrome complex",
+                   "mitochondrial envelope",
+                   "mitchondrial membrane",
+                   "respirasome",
+                   "respiratory chain complex")
+
+ter_cc_plot <- bubble_plot(gsea_results_filtered[["ter"]],
+                           "CC",
+                           "Beta2-agonist treatment",
+                           cc_ter_labels)
+
+#Terbutaline plot (BP)
+bp_ter_labels <- c("membrane fusion",
+                   "ribonucleoprotein complex biogenesis",
+                   "cell adhesion",
+                   "RNA processing",
+                   "translation",
+                   "gluconeogenesis",
+                   "mitchondrial respiratory chain complex assembly",
+                   "aerobic respiration",
+                   "oxidative phosphorylation",
+                   "proton motive force-drive mitochondrial ATP synthesis")
+
+ter_bp_plot <- bubble_plot(gsea_results_filtered[["ter"]],
+                           "BP",
+                           "Beta2-agonist treatment",
+                           bp_ter_labels)
+
+#Collect to combined plots
+cc_plots <- main_cc_plot + res_cc_plot + ter_cc_plot
+bp_plots <- main_bp_plot + res_bp_plot + ter_bp_plot
+
+ggsave(here::here('data/figures/figure2/gsea_cc_plots.svg'), height = 75, width = 120, units = "mm", plot = cc_plots)
+ggsave(here::here('data/figures/figure2/gsea_bp_plots.svg'), height = 75, width = 120, units = "mm", plot = bp_plots)
+
+```
+

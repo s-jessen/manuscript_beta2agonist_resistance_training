@@ -1,0 +1,177 @@
+---
+title: "2_t-tests"
+format: html
+editor: source
+---
+
+```{r, include = F}
+source("R/libraries.R")
+source("R/settings.R")
+source("R/functions.R")
+```
+
+```{r}
+#Load long form data
+load(here::here('data/df_long_l2fc.rda'))
+
+#Load results
+load(here::here('data/results_resistance.rda'))
+load(here::here('data/results_terbutaline.rda'))
+```
+
+4a - KLHL41 abundance
+```{r}
+plot_klhl41 <- df_long_l2fc %>% 
+  dplyr::filter(protein == "KLHL41") %>% 
+  ggplot(aes(x = intervention, y = l2fc, fill = intervention))+
+  geom_violin()+
+  geom_point(shape = 21,
+             fill = "white",
+             color = "black",
+             size = 2,
+             stroke = 0.3)+
+  geom_hline(yintercept = 0, linetype = "dashed", linewidth = 0.25)+
+  scale_fill_manual(values = c(resistance = resistance_color,
+                                   terbutaline = terbutaline_color),
+                    labels = c(resistance = "Resistance training",
+                               terbutaline = "Beta2-agonist treatment"),
+                    guide = guide_legend(direction = "vertical"))+
+  theme(
+    legend.position = "top"
+  )+
+  scale_x_discrete(labels = c("resistance" = "RES",
+                                "terbutaline" = "B2A"))+
+  labs(y = "KLHL41 abundance (l2fc)",
+       x = NULL)
+  
+#Save
+ggsave(here::here('data/figures/figure4/klhl41_abundance_change.svg'), height = 50, width = 40, units = "mm", plot = plot_klhl41)
+```
+
+4d - fiber diameter
+```{r}
+#Read data
+df_diameter <- read_xlsx(here::here('data-raw/data_cell_diameter.xlsx')) %>% 
+  #Set correct levels for plotting order along x-axis
+  dplyr::mutate(treatment = factor(treatment, levels = c(
+    "control",
+    "terbutaline",
+    "kd_control",
+    "kd_terbutaline",
+    "negative_sirna_control",
+    "negative_sirna_terbutaline"
+  )))
+
+#Plot
+plot_cell_diameter <- ggplot(df_diameter, aes(x=treatment, y = diameter, fill = treatment))+
+  geom_bar(stat = "summary",
+           fun = "mean",
+           color = "black",
+           linewidth = 0.25)+
+  geom_point(shape = 16, 
+             alpha = 0.5,
+             position = position_jitter(width = 0.1))+
+  theme(axis.text.x = element_blank(),
+        legend.position = "none")+
+  labs(y = "Fiber diameter (µm)",
+       x = NULL)+
+  scale_fill_manual(values = c(
+    "control" = "gray",
+    "terbutaline" = terbutaline_color,
+    "kd_control"= "gray",
+    "kd_terbutaline" = terbutaline_color,
+    "negative_sirna_control"= "gray",
+    "negative_sirna_terbutaline" = terbutaline_color
+  ))+
+  coord_cartesian(y=c(0,100))
+  
+#Save
+ggsave(here::here('data/figures/figure4/cell_diameter.svg'), height = 50, width = 70, units = "mm", plot = plot_cell_diameter)
+
+```
+
+4e - cell klhl41 abundance
+```{r}
+#Read data
+df_abundance <- read_xlsx(here::here('data-raw/data_cell_klhl41_abundance.xlsx')) %>% 
+  #Set correct levels for plotting order along x-axis
+  dplyr::mutate(treatment = factor(treatment, levels = c(
+    "control",
+    "terbutaline",
+    "kd_control",
+    "kd_terbutaline",
+    "negative_sirna_control",
+    "negative_sirna_terbutaline"
+  )))
+
+#Plot
+plot_cell_abundance <- ggplot(df_abundance, aes(x=treatment, y = abundance, fill = treatment))+
+  geom_bar(stat = "summary",
+           fun = "mean",
+           color = "black",
+           linewidth = 0.25)+
+  geom_point(shape = 16, 
+             alpha = 0.5,
+             position = position_jitter(width = 0.1))+
+  theme(axis.text.x = element_blank(),
+        legend.position = "none")+
+  labs(y = "KLHL41 abundance (a.u.)",
+       x = NULL)+
+  scale_fill_manual(values = c(
+    "control" = "gray",
+    "terbutaline" = terbutaline_color,
+    "kd_control"= "gray",
+    "kd_terbutaline" = terbutaline_color,
+    "negative_sirna_control"= "gray",
+    "negative_sirna_terbutaline" = terbutaline_color
+  ))+
+  coord_cartesian(y=c(0,2))
+  
+#Save
+ggsave(here::here('data/figures/figure4/cell_klhl41_abundance.svg'), height = 50, width = 70, units = "mm", plot = plot_cell_abundance)
+
+```
+
+4f - cell nuclei per fiber
+```{r}
+#Read data
+df_nuclei_per_fiber <- read_xlsx(here::here('data-raw/data_cell_nuclei_per_fiber.xlsx')) %>% 
+  #Set correct levels for plotting order along x-axis
+  dplyr::mutate(treatment = factor(treatment, levels = c(
+    "control",
+    "terbutaline",
+    "kd_control",
+    "kd_terbutaline",
+    "negative_sirna_control",
+    "negative_sirna_terbutaline"
+  )))
+
+#Plot
+plot_cell_nuclei <- ggplot(df_nuclei_per_fiber, 
+                           aes(x=treatment, y = nuclei_per_fiber, fill = treatment))+
+  geom_bar(stat = "summary",
+           fun = "mean",
+           color = "black",
+           linewidth = 0.25)+
+  geom_point(shape = 16, 
+             alpha = 0.5,
+             position = position_jitter(width = 0.1))+
+  theme(axis.text.x = element_blank(),
+        legend.position = "none")+
+  labs(y = "Nuclei/fiber",
+       x = NULL)+
+  scale_fill_manual(values = c(
+    "control" = "gray",
+    "terbutaline" = terbutaline_color,
+    "kd_control"= "gray",
+    "kd_terbutaline" = terbutaline_color,
+    "negative_sirna_control"= "gray",
+    "negative_sirna_terbutaline" = terbutaline_color
+  ))+
+  coord_cartesian(y=c(0,25))
+  
+#Save
+ggsave(here::here('data/figures/figure4/cell_nuclei_per_fiber.svg'), height = 50, width = 70, units = "mm", plot = plot_cell_nuclei)
+
+```
+

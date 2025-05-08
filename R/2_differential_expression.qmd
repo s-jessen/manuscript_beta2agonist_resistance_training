@@ -1,0 +1,38 @@
+---
+title: "2_t-tests"
+format: html
+editor: source
+---
+
+```{r, message=FALSE, error=FALSE}
+source("R/libraries.R")
+source("R/settings.R")
+source("R/functions.R")
+
+#Load long form data
+load(here::here('data/df_long.rda'))
+```
+
+
+```{r, error = FALSE, warning = FALSE, message = FALSE, include = F}
+#Run linear mixed models
+results <- lmm(df_long)
+
+#Extract data files from output
+results_interaction <- results %>% dplyr::filter(contrast == "interaction")
+results_intervention <- results %>% dplyr::filter(contrast == "main_intervention")
+results_time <- results %>% dplyr::filter(contrast == "main_time")
+results_resistance <- results %>% dplyr::filter(contrast == "resistance")
+results_terbutaline <- results %>% dplyr::filter(contrast == "terbutaline")
+
+#Save as R files
+usethis::use_data(results_interaction, overwrite = TRUE)
+usethis::use_data(results_intervention, overwrite = TRUE)
+usethis::use_data(results_time, overwrite = TRUE)
+usethis::use_data(results_resistance, overwrite = TRUE)
+usethis::use_data(results_terbutaline, overwrite = TRUE)
+
+```
+
+
+

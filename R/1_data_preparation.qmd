@@ -1,0 +1,84 @@
+---
+title: "1_data_preparation"
+format: html
+editor: source
+---
+
+Load libraries and settings
+```{r, include = F}
+source("R/libraries.R")
+source("R/settings.R")
+```
+
+Load data and metadata
+```{r}
+df <- read_xlsx('data-raw/data.xlsx') %>% 
+  tibble::column_to_rownames("gene")
+
+metadata <- read_excel(here::here('data-raw/design.xlsx')) %>%
+  tibble::column_to_rownames(var="sample") %>%
+  dplyr::mutate(sample = row.names(.)) %>% 
+  dplyr::mutate_all(factor)
+
+#Create Summarized Experiment of non-imputed data
+se_raw <- PhosphoExperiment(assay = df, colData=metadata)
+
+#Create Summarized Experiment of filtered data
+se_filtered <- selectGrps(se_raw, colData(se_raw)$time, 0.7, n=2)
+
+#Store filtered SummarizedExperiment
+usethis::use_data(se_filtered, overwrite = TRUE)
+
+#Impute
+se_imputed <- tImpute(se_filtered)
+
+#Store metadata
+usethis::use_data(metadata, overwrite = TRUE)
+```
+
+Create long form data frames for plotting and statistical analysis
+```{r}
+#Load imputed data from folder (manuscript specific)
+load(here::here('data/se_imputed.rda'))
+
+#Load Gene Ontology terms
+annotations <- read_xlsx(here::here('data-raw/uniprot_keywords.xlsx')) %>% 
+  #Maintain only first protein name
+  dplyr::mutate(protein = gsub("\\ .*","", protein)) %>% 
+  dplyr::mutate(protein = make.names(protein, unique=TRUE), protein)
+
+#Load mitocarta
+mitocarta <- read_xls('data/mitocarta.xls', col_types = "text")%>% 
+    dplyr::select('symbol', 'pathways') %>% 
+    dplyr::rename(protein=symbol,
+                  mito = pathways)
+
+#Create long form data frame
+df_long <- SummarizedExperiment::assay(se_imputed) %>% 
+  tibble::rownames_to_column("protein") %>% 
+  tidyr::pivot_longer(
+    cols = -protein,
+    names_to = "sample",
+    values_to = "abundance"
+  ) %>% 
+  #Add metadata
+  dplyr::left_join(metadata, by = "sample") %>% 
+  #Add annotations
+  dplyr::left_join(annotations, by = "protein", relationship = "many-to-many") %>% 
+  #Add mitocarta
+  dplyr::left_join(mitocarta, by = "protein")
+
+#Create long form data frame with individual log2fold changes (for plotting)
+df_long_l2fc <- df_long %>% 
+  dplyr::group_by(id, protein) %>% 
+  #Calculate log2fold change
+  dplyr::mutate(l2fc = abundance[time == "post"] - abundance[time == "pre"]) %>% 
+  #Remove redundant rows and columns
+  dplyr::filter(time == "post") %>% 
+  dplyr::select(-time)
+
+#Save long form data frames
+usethis::use_data(df_long, overwrite = TRUE)
+usethis::use_data(df_long_l2fc, overwrite = TRUE)
+```
+

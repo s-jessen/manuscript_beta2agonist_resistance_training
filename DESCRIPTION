@@ -1,0 +1,8 @@
+Package: manuscript_beta2agonist_resistance_training
+Title: Analysis Project for manuscript_beta2agonist_resistance_training
+Type: Project
+Version: 0.0.1
+Encoding: UTF-8
+Depends: 
+    R (>= 3.5)
+LazyData: true
